@@ -16,7 +16,6 @@ def PopulateConvolutionQuantizationParams():
         shift += 1
     print(multiplier, q, q_fixed, shift)
 
-
 def gen_weights():
     # FC Weights
     weights = np.load("single_fc_output_MatMul.npy")  # 自动还原 dtype/shape
@@ -46,7 +45,7 @@ def gen_weights():
     dx = NUM_PCORE * nthread * VECTOR_WIDTH
     topcnt_new = (int((topcnt + dx - 1) / dx)) * dx
     botcnt_new = (int((botcnt + IP_CHUNK_SIZE -1)/IP_CHUNK_SIZE))*IP_CHUNK_SIZE
-    #print(nthread, dx, topcnt_new, botcnt_new)
+    # print(nthread, dx, topcnt_new, botcnt_new)
     shape_new = topcnt_new * botcnt_new
 
     weights_new = np.zeros((shape_new), dtype=np.int8)
@@ -135,15 +134,47 @@ def gen_bias():
         lo = np.int16(v%bias_range)
         bias_hi[i] = hi
         bias_lo[i] = lo
-    print("bias_hi: ", bias_hi)
-    print("bias_lo: ", bias_lo)
+    # print("bias_hi: ", bias_hi)
+    # print("bias_lo: ", bias_lo)
+    biasHi_array = np.array(bias_hi)
+    biasLo_array = np.array(bias_lo)
+    np.savetxt("biasHi.txt", biasHi_array, fmt="%d", delimiter=" ")
+    np.savetxt("biasLo.txt", biasLo_array, fmt="%d", delimiter=" ")
     return
 
-def inner_product
+def SpuEvalActivation():
+    
+
+def inner_product():
+    # ZTA PARAM
+    NUM_PCORE = 4 # 4 for small, 8 for large
+    VECTOR_WIDTH = 8
+
+    # FCN PARAM
+    coef = np.loadtxt("./weights_new_step3.txt", delimiter=" ")
+    biasHi = np.loadtxt("./biasHi.txt")
+    biasLo = np.loadtxt("./biasLo.txt")
+    # bot = 
+    # top = 
+    topcnt = 10
+    topdim = 1
+    botcnt = 147
+    botdim = 1
+    coeftopcnt = 256
+    coefbotcnt = 152
+    
+    # top_scale=
+    # stream =  # SpuBundle function
+    num_thread = 8
+    num_pcore = NUM_PCORE
+    dx=num_pcore*num_thread*VECTOR_WIDTH
+    
+    return
 
 def spu_function():
     return
 
 #PopulateConvolutionQuantizationParams()
-#gen_weights()
+gen_weights()
 #gen_bias()
+# inner_product()
