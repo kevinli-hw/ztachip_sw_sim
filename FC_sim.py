@@ -143,7 +143,7 @@ def gen_bias():
     return
 
 def SpuEvalActivation():
-    
+    return
 
 def inner_product():
     # ZTA PARAM
@@ -155,6 +155,14 @@ def inner_product():
     biasHi = np.loadtxt("./biasHi.txt")
     biasLo = np.loadtxt("./biasLo.txt")
     # bot = 
+    # input
+    input_arr = [0 for i in range(3*7*7)]
+    for i in range(3):
+        for j in range(7):
+            for k in range(7):
+                input_arr[i*7*7+j*7+k] = i+j+k
+    print(input_arr)
+
     # top = 
     topcnt = 10
     topdim = 1
@@ -162,6 +170,11 @@ def inner_product():
     botdim = 1
     coeftopcnt = 256
     coefbotcnt = 152
+
+    # offset
+    input_offset = -128
+    filter_offset = 0
+    output_offset = 1
     
     # top_scale=
     # stream =  # SpuBundle function
@@ -175,6 +188,6 @@ def spu_function():
     return
 
 #PopulateConvolutionQuantizationParams()
-gen_weights()
+# gen_weights()
 #gen_bias()
-# inner_product()
+inner_product()
