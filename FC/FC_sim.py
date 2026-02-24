@@ -25,7 +25,7 @@ def PopulateConvolutionQuantizationParams():
 
 def gen_weights():
     # FC Weights
-    weights = np.load("./FC/single_fc_output_MatMul.npy")  # 自动还原 dtype/shape
+    weights = np.load("./single_fc_output_MatMul.npy")  # 自动还原 dtype/shape
     print("FC weights shape: ", weights.shape)
 
     # ZTA PARAM
@@ -64,7 +64,7 @@ def gen_weights():
         for j in range(botcnt):
             weights_new[j+i*botcnt_new] = weights[i][j]
     arr_tmp = np.array(weights_new).reshape(topcnt_new, botcnt_new)
-    np.savetxt("./FC/weights_new_step1.txt", arr_tmp, fmt="%d", delimiter=" ")
+    np.savetxt("./weights_new_step1.txt", arr_tmp, fmt="%d", delimiter=" ")
 
     # step 2
     temp1 = np.zeros((shape_new), dtype=np.int8)
@@ -89,7 +89,7 @@ def gen_weights():
                             weights_new[(k + l) * botcnt_new + j + m] = temp2[l*IP_CHUNK_SIZE+m]
 
     arr_tmp = np.array(weights_new).reshape(topcnt_new, botcnt_new)
-    np.savetxt("./FC/weights_new_step2.txt", arr_tmp, fmt="%d", delimiter=" ")
+    np.savetxt("./weights_new_step2.txt", arr_tmp, fmt="%d", delimiter=" ")
 
     # step 3
     # final shape (topcnt_new, botcnt_new/IP_CHUNK_SIZE, IP_CHUNK_SIZE)
@@ -98,7 +98,7 @@ def gen_weights():
     temp3 = np.zeros((h*w*IP_CHUNK_SIZE), dtype=np.int8)
     # transpose from (h, w, IP_CHUNK_SIZE) to (w, h, IP_CHUNK_SIZE)
     arr_tmp = np.array(weights_new).reshape(h, w, IP_CHUNK_SIZE)
-    np.savetxt("./FC/before_step3.txt", arr_tmp[0], fmt="%d", delimiter=" ")
+    np.savetxt("./before_step3.txt", arr_tmp[0], fmt="%d", delimiter=" ")
 
     for r1 in range(0, h):
         for r2 in range(0, w):
@@ -106,7 +106,7 @@ def gen_weights():
                 temp3[r2*h*IP_CHUNK_SIZE+r1*IP_CHUNK_SIZE+m] = weights_new[r1*w*IP_CHUNK_SIZE+r2*IP_CHUNK_SIZE+m]
 
     arr_tmp = np.array(temp3).reshape(h, w, IP_CHUNK_SIZE)
-    np.savetxt("./FC/after_step3.txt", arr_tmp[0], fmt="%d", delimiter=" ")
+    np.savetxt("./after_step3.txt", arr_tmp[0], fmt="%d", delimiter=" ")
 
     # copy final weights
     for r1 in range(0, h):
@@ -115,7 +115,7 @@ def gen_weights():
                 weights_new[r3+r2*IP_CHUNK_SIZE+r1*w*IP_CHUNK_SIZE] = temp3[r3+r2*IP_CHUNK_SIZE+r1*w*IP_CHUNK_SIZE]
 
     arr_tmp = np.array(weights_new).reshape(topcnt_new, botcnt_new)
-    np.savetxt("./FC/weights_new_step3.txt", arr_tmp, fmt="%d", delimiter=" ")
+    np.savetxt("./weights_new_step3.txt", arr_tmp, fmt="%d", delimiter=" ")
 
 def gen_bias():
     # OP PARAM
@@ -128,11 +128,12 @@ def gen_bias():
     D = 1 << (31-output_shift)
     bias = int((output_activation_min - output_offset)*D/output_multiplier)
     bias_len = 10
-    bias_data = np.load("./FC/single_fc_output_BiasAdd_ReadVariableOp.npy")  # 自动还原 dtype/shape
+    bias_data = np.load("./single_fc_output_BiasAdd_ReadVariableOp.npy")  # 自动还原 dtype/shape
     # print("FC bias shape: ", bias_data.shape)
     bias_hi = np.zeros((10), dtype=np.int16)
     bias_lo = np.zeros((10), dtype=np.int16)
-    bias_range = 1 << (DATA_BIT_WIDTH - 2)
+    # bias_range = 1 << (DATA_BIT_WIDTH - 2)
+    bias_range = 1 << (DATA_BIT_WIDTH - 1)
     for i in range(bias_len):
         v = bias_data[i] - bias
         hi = np.int16(v/bias_range)
@@ -143,8 +144,8 @@ def gen_bias():
     print("bias_lo: ", bias_lo)
     biasHi_array = np.array(bias_hi)
     biasLo_array = np.array(bias_lo)
-    np.savetxt("./FC/biasHi.txt", biasHi_array, fmt="%d", delimiter=" ")
-    np.savetxt("./FC/biasLo.txt", biasLo_array, fmt="%d", delimiter=" ")
+    np.savetxt("./biasHi.txt", biasHi_array, fmt="%d", delimiter=" ")
+    np.savetxt("./biasLo.txt", biasLo_array, fmt="%d", delimiter=" ")
     return
 
 def SpuEvalActivation():
@@ -156,9 +157,9 @@ def inner_product():
     VECTOR_WIDTH = 8
 
     # FCN PARAM
-    coef = np.loadtxt("./FC/weights_new_step3.txt", delimiter=" ")
-    biasHi = np.loadtxt("./FC/biasHi.txt")
-    biasLo = np.loadtxt("./FC/biasLo.txt")
+    coef = np.loadtxt("./weights_new_step3.txt", delimiter=" ")
+    biasHi = np.loadtxt("./biasHi.txt")
+    biasLo = np.loadtxt("./biasLo.txt")
     # bot = 
     # input
     input_arr = [0 for i in range(3*7*7)]
@@ -298,10 +299,10 @@ bot_i32 = model_input_i32 + 128
 # bias[9]: -13741, hi: 370, lo: 261
 
 # bias - X_min
-bias_high = np.loadtxt("./FC/biasHi.txt").astype(np.int16)  
-bias_low = np.loadtxt("./FC/biasLo.txt").astype(np.int16)
+bias_high = np.loadtxt("./biasHi.txt").astype(np.int16)
+bias_low = np.loadtxt("./biasLo.txt").astype(np.int16)
 bias_i32 = np.zeros((10), dtype=np.int32)
-temp = 1 << (DATA_BIT_WIDTH - 2)
+temp = 1 << (DATA_BIT_WIDTH - 1)
 for i in range(10):
     bias_i32[i] = bias_high[i] * temp  + bias_low[i]
     temp_a = bias_high[i] * temp
@@ -309,7 +310,7 @@ for i in range(10):
 
 print(bias_i32)
 
-weights = np.load("./FC/single_fc_output_MatMul.npy").astype(np.int32)  
+weights = np.load("./single_fc_output_MatMul.npy").astype(np.int32)
 
 result = [0 for i in range(10)]
 result = np.asarray(result, dtype=np.int64)
